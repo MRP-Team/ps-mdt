@@ -106,7 +106,7 @@ RegisterNetEvent('mdt:server:openMDT', function()
 
 	local JobType = GetJobType(PlayerData.job.name)
 	local bulletin = GetBulletins(JobType)
-	local calls = exports['ps-dispatch']:GetDispatchCalls()	
+	local calls = exports['ps-dispatch']:GetDispatchCalls()
 	--TriggerClientEvent('mdt:client:dashboardbulletin', src, bulletin)
 	TriggerClientEvent('mdt:client:open', src, bulletin, activeUnits, calls, PlayerData.citizenid)
 	--TriggerClientEvent('mdt:client:GetActiveUnits', src, activeUnits)
@@ -231,12 +231,19 @@ QBCore.Functions.CreateCallback('mdt:server:GetProfileData', function(source, cb
 
 	local job, grade = UnpackJob(target.job)
 
+	local apartmentData = GetPlayerApartment(target.citizenid)
+
+	if apartmentData then
+		apartmentData = apartmentData[1].label .. ' (' ..apartmentData[1].name..')'
+	end
+
 	local person = {
 		cid = target.citizenid,
 		firstname = target.charinfo.firstname,
 		lastname = target.charinfo.lastname,
 		job = job.label,
 		grade = grade.name,
+		apartment = apartmentData,
 		pp = ProfPic(target.charinfo.gender),
 		licences = licencesdata,
 		dob = target.charinfo.birthdate,
@@ -249,7 +256,7 @@ QBCore.Functions.CreateCallback('mdt:server:GetProfileData', function(source, cb
 		isLimited = false
 	}
 
-	if Config.PoliceJobs[JobName] then
+	if Config.PoliceJobs[JobName] or Config.DojJobs[JobName] then
 		local convictions = GetConvictions({person.cid})
 		person.convictions2 = {}
 		local convCount = 1
@@ -867,6 +874,17 @@ RegisterNetEvent('mdt:server:saveVehicleInfo', function(dbid, plate, imageurl, n
 	end
 end)
 
+RegisterNetEvent('mdt:server:searchCalls', function(calls)
+	local src = source
+	local Player = QBCore.Functions.GetPlayer(src)
+	local JobType = GetJobType(Player.PlayerData.job.name)
+	if JobType == 'police' then
+		local calls = exports['ps-dispatch']:GetDispatchCalls()
+		TriggerClientEvent('mdt:client:getCalls', src, calls)
+
+	end
+end)
+
 QBCore.Functions.CreateCallback('mdt:server:SearchWeapons', function(source, cb, sentData)
 	if not sentData then  return cb({}) end
 	local PlayerData = GetPlayerData(source)
@@ -905,7 +923,7 @@ RegisterNetEvent('mdt:server:saveWeaponInfo', function(serial, imageurl, notes, 
 					['weapModel'] = weapModel,
 					['imageurl'] = imageurl,
 				})
-				
+
 				if result then
 					TriggerEvent('mdt:server:AddLog', "A weapon with the serial number ("..serial..") was added to the weapon information database by "..fullname)
 				else
